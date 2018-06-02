@@ -11,15 +11,18 @@
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.control.Menu?>
 <?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.Slider?>
+<?import javafx.scene.control.ProgressBar?>
 <FlowPane fx:controller="sample.Controller"
           xmlns:fx="http://javafx.com/fxml">
-    <MenuBar>
-        <Menu text="Options">
-
-        </Menu>
-    </MenuBar>
+    <HBox>
+        <Slider fx:id="iterSlider" value="50" min="0" max="5000" orientation="HORIZONTAL"
+                majorTickUnit="1" snapToTicks="true" blockIncrement="50" HBox.hgrow="ALWAYS"/>
+        <Label fx:id="iterLabel" />
+        <ProgressBar fx:id="progressBar" />
+    </HBox>
     <Canvas fx:id="canvas"
-            width="800" height="600" style="-fx-border-color: black; -fx-border-width: 1px;">
+            width="1200" height="900" style="-fx-border-color: black; -fx-border-width: 1px;">
     </Canvas>
 
 

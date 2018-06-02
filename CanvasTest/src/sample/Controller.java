@@ -1,22 +1,29 @@
 package sample;
 
 import complex.ComplexNumber;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.concurrent.Task;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.Parent;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.input.ScrollEvent;
+import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
+import javafx.scene.control.Slider;
+import javafx.scene.image.PixelWriter;
+import javafx.scene.input.*;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
 
 public class Controller {
     @FXML private Canvas canvas;
+    @FXML private Label iterLabel;
+    @FXML private Slider iterSlider;
+    @FXML private ProgressBar progressBar;
     private double xmin, ymin, xmax, ymax;
     private long timeSinceLastScroll;
     private boolean isDrawing;
@@ -27,13 +34,8 @@ public class Controller {
         xmax = 1.0;
         ymin = -1.0;
         ymax = 1.0;
-        /*Rectangle clip = new Rectangle(800,600);
-        clip.setLayoutX(0);
-        clip.setLayoutY(0);
-        canvas.setClip(clip);*/
-        GraphicsContext ctx = canvas.getGraphicsContext2D();
+
         canvas.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-            @Override
             public void handle(MouseEvent event) {
                 if(!isDrawing && event.getButton().equals(MouseButton.PRIMARY)){
                     System.out.println("Before");
@@ -70,7 +72,6 @@ public class Controller {
             }
         });
         canvas.addEventHandler(ScrollEvent.SCROLL, new EventHandler<ScrollEvent>() {
-            @Override
             public void handle(ScrollEvent event) {
                 if(!isDrawing){
                     double distx = Math.abs(xmax - xmin)/4;
@@ -91,21 +92,31 @@ public class Controller {
                 }
             }
         });
-
+        iterSlider.setOnKeyTyped((event) -> {
+            System.out.println("event.getCharacter() = " + event.getCharacter());
+            if(event.getCharacter().equals(" ")){
+                drawSet(iters);
+            }
+        });
+        iterSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+            iters = newValue.intValue();
+            iterLabel.setText(iters+"");
+        });
+        iters = (int)iterSlider.getValue();
+        iterLabel.setText(iters + "");
         resetCanvas();
     }
-    void drawSet(int depth){
+    void drawSet(final int depth) {
         isDrawing = true;
 //        x: [-1.5, 2]
 //        y: [-1  , 1]
-        double width = canvas.getWidth(), height = canvas.getHeight();
+        final double width = canvas.getWidth(), height = canvas.getHeight();
 
-        for(double x = 0.0; x < width; x += 1.0){
-            for(double y = 0.0; y < height; y += 1.0){
-                drawMandelbrotPoint(x,y,depth);
-//                drawJuliaPoint(x,y,depth,-0.4,0.6);
+        for (double x = 0.0; x < width; x += 1.0) {
+            for (double y = 0.0; y < height; y += 1.0) {
+                drawMandelbrotPoint(x, y, depth);
             }
-            System.out.println(100 * x/width + "% done");
+            System.out.printf("%.3f%% done\n", 100 * x / width);
         }
         isDrawing = false;
     }
@@ -128,7 +139,8 @@ public class Controller {
             }
         }
     }
-    void drawMandelbrotPoint(double x, double y, int depth){
+
+    Color getMandelbrotColor(double x, double y, int depth){
         double px, py, zx=0, zy=0;
         double dx, dy;
         ComplexNumber z = new ComplexNumber(0,0);
@@ -139,12 +151,6 @@ public class Controller {
         py = y*dy + ymin;
         ComplexNumber c = new ComplexNumber(px, py);
         for(int i = 0; i < depth; i++){
-            //Math do do it before I made a wrapper class
-            double tempx = zx, tempy = zy;
-            zx = Math.pow(tempx,2) - Math.pow(tempy, 2) + px;
-            zy = 2 * tempx * tempy + py;
-            double sqDist = Math.pow(zx, 2) + Math.pow(zy, 2);
-            /////////////////////////////////////////////
             z = z.multiply(z).add(c);
             if(z.sqMagnitude() >= 4){
                 double pct = (double)i/(double)depth;
@@ -152,6 +158,10 @@ public class Controller {
                 break;
             }
         }
+        return color;
+    }
+    void drawMandelbrotPoint(final double x, final double y, final int depth){
+        Color color = getMandelbrotColor(x, y, depth);
         drawPoint(x,y,color);
     }
     void resetCanvas(){
@@ -165,15 +175,9 @@ public class Controller {
         ctx.fillRect(0,0,canvas.getWidth(), canvas.getHeight());
         ctx.setFill(temp);
     }
-    void drawPoint(double x, double y){
-        GraphicsContext gc = canvas.getGraphicsContext2D();
-        gc.fillRect(x, y, 1,1);
-    }
-    void drawPoint(double x, double y, Paint p){
-        GraphicsContext gc = canvas.getGraphicsContext2D();
-        Paint temp = gc.getFill();
-        gc.setFill(p);
-        drawPoint(x, y);
-        gc.setFill(temp);
+
+    void drawPoint(double x, double y, Color p){
+        PixelWriter pw = canvas.getGraphicsContext2D().getPixelWriter();
+        pw.setColor((int)x, (int)y, p);
     }
 }
