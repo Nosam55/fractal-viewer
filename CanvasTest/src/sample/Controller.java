@@ -141,7 +141,7 @@ public class Controller {
     }
 
     Color getMandelbrotColor(double x, double y, int depth){
-        double px, py, zx=0, zy=0;
+        double px, py;
         double dx, dy;
         ComplexNumber z = new ComplexNumber(0,0);
         dx = (xmax - xmin)/canvas.getWidth();
