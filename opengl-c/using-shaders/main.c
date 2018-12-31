@@ -3,13 +3,13 @@
 #include<GL/glew.h>
 #include<GLFW/glfw3.h>
 
-#define WIDTH 1200
-#define HEIGHT 900
+int g_width = 1200;
+int g_height = 900;
 
 typedef struct {
 	double x;
 	double y;
-} vec2;
+} dvec2;
 
 static const float clipCoords[] = {
 	-1.0f, 1.0f,
@@ -27,7 +27,7 @@ static double xmin = -2.0f,
 	xmax = 1.0f,
 	ymin = -1.0f,
 	ymax = 1.0f;
-
+static dvec2 mu = {-0.75, 0.0};
 static int isPaused = 0;
 
 static struct {
@@ -35,11 +35,12 @@ static struct {
 	GLuint delta;
 	GLuint mins;
 	GLuint iters;
+	GLuint mu;
 } layouts;
 
 
-inline vec2 get_delta() {
-	return (vec2) { (xmax - xmin) / WIDTH, (ymax - ymin) / HEIGHT };
+inline dvec2 get_delta() {
+	return (dvec2) { (xmax - xmin) / g_width, (ymax - ymin) / g_height };
 }
 void check_gl_errors() {
 	switch (glGetError()) {
@@ -65,66 +66,17 @@ void check_gl_errors() {
 		fputs("error: stack underflow!", stderr);
 	}
 }
-void on_key_press(GLFWwindow *window, int key, int scancode, int action, int mods) {
-	if (key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT)
-		return;
-	if (action == GLFW_PRESS) {
-		switch (key) {
-		case GLFW_KEY_RIGHT:
-			iters += (mods == GLFW_MOD_SHIFT ? 500 : 50);
-			glUniform1i(layouts.iters, iters);
-			printf("%i iterations per pixel\n", iters);
-			break;
-		case GLFW_KEY_LEFT:
-			iters -= (mods == GLFW_MOD_SHIFT ? 500 : 50);
-			glUniform1i(layouts.iters, iters);
-			printf("%i iterations per pixel\n", iters);
-			break;
-		case GLFW_KEY_SPACE:
-			//TODO: REDRAW
-			printf("Centered at %.15f %+.15fi\n", (xmax - xmin) / 2.0 + xmin, (ymax - ymin) / 2.0 + ymin);
-			break;
-		default:
-			printf("(Shift +)Right/Left Arrow: Increase/Decrease iters by 50 (500 w/ shift)\nSpace: Redraw the screen\n");
-			break;
-		}
-	}
+
+void on_resize(GLFWwindow *window, int nw, int nh) {
+	g_width = nw;
+	g_height = nh;
+	glUniform2d(layouts.delta, get_delta().x, get_delta().y);
 	isPaused = 0;
-}
-void center_on_point(const vec2 center) {
-	vec2 diff;
-	diff.x = xmax - xmin;
-	diff.y = ymax - ymin;
-	xmin = center.x - diff.x / 2;
-	xmax = center.x + diff.x / 2;
-	ymin = center.y - diff.y / 2;
-	ymax = center.y + diff.y / 2;
+	printf("w: %i height: %i\n", nw, nh);
 }
 
-void on_click(GLFWwindow *window, int button, int action, int mods) {
-	if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS) {
-		vec2 pos, newcenter, delta = get_delta(), diff;
-		double tempx, tempy;
-		glfwGetCursorPos(window, &tempx, &tempy);
-		pos.x = tempx;
-		pos.y = tempy;
-		diff.x = xmax - xmin;
-		diff.y = ymax - ymin;
-		newcenter.x = delta.x * pos.x + xmin;
-		newcenter.y = delta.y * (HEIGHT - pos.y) + ymin;
-		center_on_point(newcenter);
-		printf("Centered at %.15f %+.15fi\n", newcenter.x, newcenter.y);
-	}
-	else if (button == GLFW_MOUSE_BUTTON_2 && action == GLFW_PRESS) {
-		xmin = -2.0, xmax = 1.0, ymin = -1.0, ymax = 1.0;
-		printf("Centered at %.15f %+.15fi\n", (xmax - xmin) / 2.0 + xmin, (ymax - ymin) / 2.0 + ymin);
-		glUniform2d(layouts.delta, get_delta().x, get_delta().y);
-	}
-	glUniform2d(layouts.mins, xmin, ymin);
-	isPaused = 0;
-}
 void on_scroll(GLFWwindow *window, double xoffset, double yoffset) {
-	vec2 diff;
+	dvec2 diff;
 	diff.x = xmax - xmin;
 	diff.y = ymax - ymin;
 	if (yoffset > 0.0) {
@@ -145,6 +97,101 @@ void on_scroll(GLFWwindow *window, double xoffset, double yoffset) {
 	glUniform2d(layouts.delta, get_delta().x, get_delta().y);
 	isPaused = 0;
 }
+void on_key_press(GLFWwindow *window, int key, int scancode, int action, int mods) {
+	if (key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT)
+		return;
+	if (action == GLFW_PRESS) {
+		switch (key) {
+		case GLFW_KEY_RIGHT:
+			if (mods == GLFW_MOD_CONTROL)
+				++iters;
+			else
+				iters += (mods == GLFW_MOD_SHIFT ? 500 : 50);
+			glUniform1i(layouts.iters, iters);
+			printf("%i iterations per pixel\n", iters);
+			break;
+		case GLFW_KEY_LEFT:
+			if (mods == GLFW_MOD_CONTROL)
+				--iters;
+			else
+				iters -= (mods == GLFW_MOD_SHIFT ? 500 : 50);
+			glUniform1i(layouts.iters, iters);
+			printf("%i iterations per pixel\n", iters);
+			break;
+		case GLFW_KEY_SPACE:
+			//TODO: REDRAW
+			printf("Centered at %.15f %+.15fi\n", (xmax - xmin) / 2.0 + xmin, (ymax - ymin) / 2.0 + ymin);
+			break;
+		case GLFW_KEY_UP:
+			on_scroll(window, 0.0, 1.0);
+			break;
+		case GLFW_KEY_DOWN:
+			on_scroll(window, 0.0, -1.0);
+			break;
+		case GLFW_KEY_KP_6:
+			mu.x += (mods == GLFW_MOD_CONTROL ? 0.01 : 0.05);
+			glUniform2d(layouts.mu, mu.x, mu.y);
+			printf("mu is now %.2f + (%.2fi)\n", mu.x, mu.y);
+			break;
+		case GLFW_KEY_KP_4:
+			mu.x -= (mods == GLFW_MOD_CONTROL ? 0.01 : 0.05);
+			glUniform2d(layouts.mu, mu.x, mu.y);
+			printf("mu is now %.2f + (%.2fi)\n", mu.x, mu.y);
+			break;
+		case GLFW_KEY_KP_8:
+			mu.y += (mods == GLFW_MOD_CONTROL ? 0.01 : 0.05);
+			glUniform2d(layouts.mu, mu.x, mu.y);
+			printf("mu is now %.2f + (%.2fi)\n", mu.x, mu.y);
+			break;
+		case GLFW_KEY_KP_2:
+			mu.y -= (mods == GLFW_MOD_CONTROL ? 0.01 : 0.05);
+			glUniform2d(layouts.mu, mu.x, mu.y);
+			printf("mu is now %.2f + (%.2fi)\n", mu.x, mu.y);
+			break;
+		case GLFW_KEY_KP_0:
+			mu = (dvec2){ -0.75, 0.0 };
+			glUniform2d(layouts.mu, mu.x, mu.y);
+			printf("mu is now %.2f + (%.2fi)\n", mu.x, mu.y);
+		default:
+			printf("(Shift +)Right/Left Arrow: Increase/Decrease iters by 50 (500 w/ shift)\nSpace: Redraw the screen\n");
+			return;
+		}
+	}
+	isPaused = 0;
+}
+void center_on_point(const dvec2 center) {
+	dvec2 diff;
+	diff.x = xmax - xmin;
+	diff.y = ymax - ymin;
+	xmin = center.x - diff.x / 2;
+	xmax = center.x + diff.x / 2;
+	ymin = center.y - diff.y / 2;
+	ymax = center.y + diff.y / 2;
+}
+
+void on_click(GLFWwindow *window, int button, int action, int mods) {
+	if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS) {
+		dvec2 pos, newcenter, delta = get_delta(), diff;
+		double tempx, tempy;
+		glfwGetCursorPos(window, &tempx, &tempy);
+		pos.x = tempx;
+		pos.y = tempy;
+		diff.x = xmax - xmin;
+		diff.y = ymax - ymin;
+		newcenter.x = delta.x * pos.x + xmin;
+		newcenter.y = delta.y * (g_height - pos.y) + ymin;
+		center_on_point(newcenter);
+		printf("Centered at %.15f %+.15fi\n", newcenter.x, newcenter.y);
+	}
+	else if (button == GLFW_MOUSE_BUTTON_2 && action == GLFW_PRESS) {
+		xmin = -2.0, xmax = 1.0, ymin = -1.0, ymax = 1.0;
+		printf("Centered at %.15f %+.15fi\n", (xmax - xmin) / 2.0 + xmin, (ymax - ymin) / 2.0 + ymin);
+		glUniform2d(layouts.delta, get_delta().x, get_delta().y);
+	}
+	glUniform2d(layouts.mins, xmin, ymin);
+	isPaused = 0;
+}
+
 GLuint load_shaders(const char *vertex_path, const char *frag_path) {
 	GLuint vertexID = glCreateShader(GL_VERTEX_SHADER),
 		fragID = glCreateShader(GL_FRAGMENT_SHADER),
@@ -240,12 +287,12 @@ int main(void) {
 	}
 
 	glfwWindowHint(GLFW_SAMPLES, 4);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+	//glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	window = glfwCreateWindow(WIDTH, HEIGHT, "shader boye", NULL, NULL);
+	window = glfwCreateWindow(g_width, g_height, "shader boye", NULL, NULL);
 
 	if (window == NULL) {
 		fprintf(stderr, "unable to initialize OpenGL 4.4!\n");
@@ -265,6 +312,8 @@ int main(void) {
 	glfwSetKeyCallback(window, on_key_press);
 	glfwSetMouseButtonCallback(window, on_click);
 	glfwSetScrollCallback(window, on_scroll);
+	glfwSetWindowSizeCallback(window, on_resize);
+	glfwSetWindowAspectRatio(window, 4, 3);
 	//Setup data
 	glGenVertexArrays(1, &vertexArray);
 	glBindVertexArray(vertexArray);
@@ -278,26 +327,28 @@ int main(void) {
 	layouts.delta = glGetUniformLocation(program, "delta");
 	layouts.mins = glGetUniformLocation(program, "mins");
 	layouts.iters = glGetUniformLocation(program, "iters");
+	layouts.mu = glGetUniformLocation(program, "mu");
 	glUseProgram(program);
 	printf("delta: %i\nmins: %i\niters: %i\n", layouts.delta, layouts.mins, layouts.iters);
 	glUniform2d(layouts.delta, get_delta().x, get_delta().y);
 	glUniform2d(layouts.mins, xmin, ymin);
 	glUniform1i(layouts.iters, iters);
+	glUniform2d(layouts.mu, mu.x, mu.y);
 	
 	///////////////
 	while (!glfwWindowShouldClose(window)) {
-		if (!isPaused) {
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		if (isPaused != 2) {
+			glClear(GL_COLOR_BUFFER_BIT);
 			glUseProgram(program);
 			//puts("lop");
-
+			//check_gl_errors();
 			glEnableVertexAttribArray(layouts.position);
 			glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
 			glVertexAttribPointer(layouts.position, 2, GL_FLOAT, 0, 0, NULL);
 			glDrawArrays(GL_TRIANGLES, 0, 6);
-			glDisableVertexAttribArray(0);
+			glDisableVertexAttribArray(layouts.position);
 			glfwSwapBuffers(window);
-			isPaused = 1;
+			isPaused += 1;
 		}
 		glfwPollEvents();
 	}
