@@ -2,3 +2,14 @@
 *.xml
 *.class
 *.iml
+*.suo
+*.db
+*.ipch
+*.vcxproj
+*.log
+*.obj
+*.tlog
+*.pdb
+*.exe
+*.iobj
+*.ipdb

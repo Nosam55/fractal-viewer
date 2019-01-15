@@ -286,7 +286,7 @@ int main(void) {
 	
 	///////////////
 	while (!glfwWindowShouldClose(window)) {
-		if (!isPaused) {
+		if (isPaused < 2) {
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			glUseProgram(program);
 			//puts("lop");
@@ -297,7 +297,7 @@ int main(void) {
 			glDrawArrays(GL_TRIANGLES, 0, 6);
 			glDisableVertexAttribArray(0);
 			glfwSwapBuffers(window);
-			isPaused = 1;
+			isPaused++;
 		}
 		glfwPollEvents();
 	}
