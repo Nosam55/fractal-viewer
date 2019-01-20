@@ -53,7 +53,7 @@ void check_gl_errors() {
 		fputs("error: invalid operation!", stderr);
 		break;
 	case GL_INVALID_FRAMEBUFFER_OPERATION:
-		fputs("error: invali framebuffer operation!", stderr);
+		fputs("error: invalid framebuffer operation!", stderr);
 		break;
 	case GL_OUT_OF_MEMORY:
 		fputs("error: out of memory!", stderr);
